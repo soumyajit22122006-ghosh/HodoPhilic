@@ -83,59 +83,50 @@ module.exports.showListing = async (req, res, next) => {
 
 module.exports.createListing = async (req, res, next) => {
     try {
-        // Image uploaded to Cloudinary
         let url = req.file.path;
         let filename = req.file.filename;
 
-        // Create listing
         const listing = new Listing(req.body.listing);
 
-        // Set owner
         listing.owner = req.user._id;
 
-        // Set image
         listing.image = {
-            url: url,
-            filename: filename
+            url,
+            filename
         };
 
         // Get location entered by user
         const location = req.body.listing.location;
 
-        // MapTiler Geocoding
-        const mapTilerApiKey = process.env.MAPTILER_API_KEY;
-
-        if (!mapTilerApiKey) {
-            throw new Error("MAPTILER_API_KEY is not configured.");
-        }
-
+        // Nominatim Geocoding
         const response = await fetch(
-            `https://api.maptiler.com/geocoding/${encodeURIComponent(location)}.json?key=${mapTilerApiKey}`
+            `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+                location
+            )}&format=json&limit=1`,
+            {
+                headers: {
+                    "User-Agent": "HodoPhilic/1.0"
+                }
+            }
         );
 
         if (!response.ok) {
             throw new Error(
-                `MapTiler request failed: ${response.status}`
+                `Nominatim request failed: ${response.status}`
             );
         }
 
         const data = await response.json();
 
-        // Check whether location was found
-        if (
-            data.features &&
-            data.features.length > 0 &&
-            data.features[0].geometry &&
-            data.features[0].geometry.coordinates
-        ) {
-            const coordinates =
-                data.features[0].geometry.coordinates;
+        if (data.length > 0) {
+            const latitude = parseFloat(data[0].lat);
+            const longitude = parseFloat(data[0].lon);
 
             listing.geometry = {
                 type: "Point",
                 coordinates: [
-                    coordinates[0], // longitude
-                    coordinates[1]  // latitude
+                    longitude,
+                    latitude
                 ]
             };
         } else {
@@ -147,7 +138,6 @@ module.exports.createListing = async (req, res, next) => {
             return res.redirect("/listings/new");
         }
 
-        // Save listing to MongoDB Atlas
         await listing.save();
 
         req.flash(
@@ -155,7 +145,6 @@ module.exports.createListing = async (req, res, next) => {
             "New listing created!"
         );
 
-        // Redirect to listing page
         res.redirect(`/listings/${listing._id}`);
 
     } catch (err) {
