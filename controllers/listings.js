@@ -94,14 +94,28 @@ module.exports.createListing = async (req, res, next) => {
         // Get location entered by user
         const location = req.body.listing.location;
         // Nominatim Geocoding
-        const response = await fetch(
-                `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(location)}&format=json&limit=1`,
+                const response = await fetch(
+            `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(location)}&format=json&limit=1`,
             {
                 headers: {
-                    "User-Agent": "WanderLust/1.0"
+                    "User-Agent": "HodoPhilic/1.0 (contact@example.com)",
+                    "Accept": "application/json"
                 }
             }
         );
+
+        if (!response.ok) {
+            throw new Error(`Nominatim request failed: ${response.status}`);
+        }
+
+        const contentType = response.headers.get("content-type") || "";
+
+        if (!contentType.includes("application/json")) {
+            const text = await response.text();
+            console.error("Nominatim returned non-JSON:", text.substring(0, 500));
+            throw new Error("Location service returned an invalid response.");
+        }
+
         const data = await response.json();
         // Check if location was found
        if (data.length > 0) {
