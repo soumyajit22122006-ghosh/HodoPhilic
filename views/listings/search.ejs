@@ -1,0 +1,60 @@
+<% layout("/layouts/boilerplate") %>
+
+<div class="container mt-4">
+
+    <h2>
+        <b>Places to stay in "<%= searchLocation %>"</b>
+    </h2>
+
+    <div class="row row-cols-xl-3 row-cols-lg-3 row-cols-md-2 row-cols-sm-1 mt-4">
+
+        <% for (let listing of listings) { %>
+
+            <div class="col mb-4">
+
+                <a
+                    href="/listings/<%= listing._id %>"
+                    class="listing-link"
+                >
+
+                    <div class="card">
+
+                        <img
+                            src="<%= listing.image.url %>"
+                            class="card-img-top"
+                            alt="listing image"
+                            style="height: 20rem;"
+                        >
+
+                        <div class="card-body">
+
+                            <p class="card-text">
+
+                                <b>
+                                    <%= listing.title %>
+                                </b>
+
+                                <br>
+
+                                <%= listing.location %>
+
+                                <br>
+
+                                ₹ <%= listing.price.toLocaleString("en-IN") %>
+                                / Night
+
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </a>
+
+            </div>
+
+        <% } %>
+
+    </div>
+
+</div>

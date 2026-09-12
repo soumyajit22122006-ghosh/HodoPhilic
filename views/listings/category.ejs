@@ -1,0 +1,67 @@
+<% layout("layouts/boilerplate") %>
+
+<div class="container mt-4">
+
+    <h2 class="mb-4">
+        <%= category %>
+    </h2>
+
+    <div class="row row-cols-lg-3 row-cols-md-2 row-cols-1 g-4">
+
+        <% if (listings.length === 0) { %>
+
+            <div class="col-12">
+                <div class="alert alert-info">
+                    No listings found in this category.
+                </div>
+            </div>
+
+        <% } %>
+
+
+        <% listings.forEach(listing => { %>
+
+            <div class="col">
+
+                <a
+                    href="/listings/<%= listing._id %>"
+                    style="text-decoration: none; color: inherit;"
+                >
+
+                    <div class="card h-100">
+
+                        <img
+                            src="<%= listing.image.url %>"
+                            class="card-img-top"
+                            alt="<%= listing.title %>"
+                            style="height: 250px; object-fit: cover;"
+                        >
+
+                        <div class="card-body">
+
+                            <h5 class="card-title">
+                                <%= listing.title %>
+                            </h5>
+
+                            <p class="card-text">
+                                <%= listing.location %>,
+                                <%= listing.country %>
+                            </p>
+
+                            <p class="card-text">
+                                ₹<%= listing.price %> / night
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </a>
+
+            </div>
+
+        <% }) %>
+
+    </div>
+
+</div>
