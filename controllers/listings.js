@@ -83,69 +83,81 @@ module.exports.showListing = async (req, res, next) => {
 
 module.exports.createListing = async (req, res, next) => {
     try {
+        // Image uploaded to Cloudinary
         let url = req.file.path;
         let filename = req.file.filename;
+
+        // Create listing
         const listing = new Listing(req.body.listing);
+
+        // Set owner
         listing.owner = req.user._id;
+
+        // Set image
         listing.image = {
-            url,
-            filename
+            url: url,
+            filename: filename
         };
+
         // Get location entered by user
         const location = req.body.listing.location;
-        // Nominatim Geocoding
-                const response = await fetch(
-            `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(location)}&format=json&limit=1`,
-            {
-                headers: {
-                    "User-Agent": "HodoPhilic/1.0 (contact@example.com)",
-                    "Accept": "application/json"
-                }
-            }
+
+        // MapTiler Geocoding
+        const mapTilerApiKey = process.env.MAPTILER_API_KEY;
+
+        if (!mapTilerApiKey) {
+            throw new Error("MAPTILER_API_KEY is not configured.");
+        }
+
+        const response = await fetch(
+            `https://api.maptiler.com/geocoding/${encodeURIComponent(location)}.json?key=${mapTilerApiKey}`
         );
 
         if (!response.ok) {
-            throw new Error(`Nominatim request failed: ${response.status}`);
-        }
-
-        const contentType = response.headers.get("content-type") || "";
-
-        if (!contentType.includes("application/json")) {
-            const text = await response.text();
-            console.error("Nominatim returned non-JSON:", text.substring(0, 500));
-            throw new Error("Location service returned an invalid response.");
+            throw new Error(
+                `MapTiler request failed: ${response.status}`
+            );
         }
 
         const data = await response.json();
-        // Check if location was found
-       if (data.length > 0) {
 
-            const latitude = parseFloat(data[0].lat);
-            const longitude = parseFloat(data[0].lon);
+        // Check whether location was found
+        if (
+            data.features &&
+            data.features.length > 0 &&
+            data.features[0].geometry &&
+            data.features[0].geometry.coordinates
+        ) {
+            const coordinates =
+                data.features[0].geometry.coordinates;
 
-        listing.geometry = {
-            type: "Point",
-            coordinates: [
-                longitude,
-                latitude
-        ]
-    };
+            listing.geometry = {
+                type: "Point",
+                coordinates: [
+                    coordinates[0], // longitude
+                    coordinates[1]  // latitude
+                ]
+            };
+        } else {
+            req.flash(
+                "error",
+                "Location could not be found!"
+            );
 
-    } else {
+            return res.redirect("/listings/new");
+        }
 
-        req.flash(
-        "error",
-        "Location could not be found!"
-        );
-
-        return res.redirect("/listings/new");
-    }
+        // Save listing to MongoDB Atlas
         await listing.save();
+
         req.flash(
             "success",
             "New listing created!"
         );
+
+        // Redirect to listing page
         res.redirect(`/listings/${listing._id}`);
+
     } catch (err) {
         next(err);
     }
